@@ -23,10 +23,30 @@ def print_image(img, title = "", size = 8):
     plt.title(title)
     plt.show()
 
+def setParamCompression(imageName):
+    image = cv2.imread(imageName, cv2.IMREAD_COLOR)
+    newImage = imageName[:len(imageName)-4] + ".jpg"
+    fileImage = open(newImage, 'wb')
+
+    height, width, channels = image.shape
+    
+    heightToMultple8 = 0 if (height % 8 == 0) else (8 - height % 8)
+    widthToMultple8 = 0 if (width % 8 == 0) else (8 - width % 8)
+    
+    if (heightToMultple8 != 0):
+        block = image[0:height-heightToMultple8, 0:width-widthToMultple8]
+        height, width, channels = block.shape
+        print(height)
+        print(width)
+        cv2.imshow("test", block)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    print(heightToMultple8)
+    print(widthToMultple8)
 
 # In[10]:
 
-
+"""
 #img = cv2.imread('C:/Furb/satelite1.png', cv2.IMREAD_COLOR)
 img = cv2.imread('C:/Furb/satelite1.png', 0)      # 1 chan, grayscale!
 
@@ -51,3 +71,6 @@ res2 = res.reshape((img.shape))
 
 #Codificação Estatístico
 
+"""
+
+setParamCompression("./dataset_files_download/dataset/teste-02.bmp")
