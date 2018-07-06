@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[15]:
+# In[1]:
 
 
 #Trabalho final
@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
 
 
-# In[16]:
+# In[2]:
 
 
 class HeapNode:
@@ -35,7 +35,7 @@ class HeapNode:
         return self.freq > other.freq
 
 
-# In[48]:
+# In[3]:
 
 
 class HuffmanCoding:
@@ -137,7 +137,7 @@ class HuffmanCoding:
         return b
 
 
-# In[18]:
+# In[4]:
 
 
 def print_image_tela(image, title = ""):
@@ -146,7 +146,7 @@ def print_image_tela(image, title = ""):
     cv2.destroyAllWindows()
 
 
-# In[19]:
+# In[5]:
 
 
 def print_image(img, title = "", size = 8):
@@ -159,7 +159,7 @@ def print_image(img, title = "", size = 8):
     plt.show()
 
 
-# In[20]:
+# In[6]:
 
 
 def zigzag(array):
@@ -171,11 +171,11 @@ def zigzag(array):
     return sum(d,[])
 
 
-# In[226]:
+# In[47]:
 
 
 def compression(imageName):
-    image = cv2.imread(imageName, cv2.COLOR_BGR2YCrCb)
+    image = cv2.imread(imageName)
     
     matrix_luminance =  [[16, 11, 10, 16, 24, 40, 51, 61],
                          [12, 12, 14, 19, 26, 58, 60, 55],
@@ -188,17 +188,11 @@ def compression(imageName):
     
     y, cb, cr = cv2.split(image)
     
-    #print("1")
-    #print(len(y))
-    #print_image(y)
+    print(image.shape)
+    print_image(image)
     
-    #print("2")
-    #d = cv2.merge((y, cb, cr))
-    #print_image(d)
-    
+    #Adiciona uma borda na imagem caso ela não seja divisível por 8
     h,w = y.shape[:2]
-    
-    print(y.shape[:2])
     
     padding_h = 0
     padding_w = 0
@@ -208,70 +202,66 @@ def compression(imageName):
         
     if (w % 8 > 0):
         padding_w = 8 - (w % 8)
-        
-    print(padding_h)
-    print(padding_w)
     
-    y = cv2.copyMakeBorder(y, padding_h, 0, padding_w, 0, cv2.BORDER_REPLICATE)
+    y = cv2.copyMakeBorder(y, padding_h, 0, padding_w, 0, cv2.BORDER_REPLICATE)    
+    cb = cv2.copyMakeBorder(cb, padding_h, 0, padding_w, 0, cv2.BORDER_REPLICATE)
+    cr = cv2.copyMakeBorder(cr, padding_h, 0, padding_w, 0, cv2.BORDER_REPLICATE)
+
     
     hy,wy = y.shape[:2]
     
-    print(y.shape[:2])
-    
     i = 0
     j = 0
-    c=0
     
-    output_array = []
+    #Matriz que vai receber o resultado final
     output_matrix = y
-
-    #for i in range(0, h, 8):
-        #for j in range(0, w, 8):
-    while i < hy - 8:
-        j = 0
-        while j < wy - 8:   
-            print("i: " + str(i) + " - " + str(i+8))            
-            print("j: " + str(j) + " - " + str(j+8))
-            
+    output_array = []
+    
+    for i in range(0, h, 8):
+        for j in range(0, w, 8):
             output_array = []
             
+            #Bloco 8x8 da imagem (subtrai zero-shift)
             image_block_8 = np.float32(y[i:i+8,j:j+8])-128
+            
             dct = np.float32(image_block_8)
 
             #parâmetros do dct: input, output, flag (faz linha por linha)
             dct = cv2.dct(image_block_8, dct, cv2.DCT_ROWS)
     
+            #Quantização da imagem após DCT
             quantization = np.int32(dct)/matrix_luminance
     
             quantization = np.int32(quantization)
     
+            #Algoritmo de ordenação em zig zag
             ordination = zigzag(quantization)
     
+            #Codificação entrópica utilizando algoritmo de Huffman
             huffman = HuffmanCoding(ordination)
 
             result = huffman.compress(ordination)
             
-            c+=c
-            
+            #Huffman retorna um array com números no formato binário
+            #Então verifica quantidade de bits (mais o zero-shift aplicado na DCT) e aplica em uma nova matriz
             r = 0
             for r in range(len(result)):
                 output_array.append(len(result[r]) + 128)
             
+            #Verifica a diferença de tamanho do array de Huffman e do tamamnho do bloco 8x8
             block_size_difference = 64 - len(result)
             
-            #print("r: " + str(len(result)))
-            #print("dif: " + str(block_size_difference))
-            
+            #Completa o array com o valor 128 (zero-shift aplicado na DCT)
             r = 0
             if (block_size_difference > 0):
                 for r in range(block_size_difference):
                     output_array.append(128)
             
+            #Transforma o array em uma matriz 8x8 com os valores do resultado
             output_matrix[i:i+8,j:j+8] = np.reshape(np.asmatrix(output_array), (8,8))
             
-            j += 8
-            
-        i += 8
+    
+    #Une a matriz final com os demais canais da imagem original
     
     #tem que cortar a matriz quando a imagem não é divisível por 8
     print(len(output_matrix))
@@ -282,7 +272,7 @@ def compression(imageName):
         
     print(len(output_matrix))
     
-    t = cv2.merge((output_matrix, cb, cr))
+    t = cv2.merge((y, cb, cr))
     
     #newImage = cv2.cvtColor(t, cv2.COLOR_YCrCb2RGB)    
     newImage = t
@@ -293,15 +283,18 @@ def compression(imageName):
     print("4")
     print_image(newImage)
     
+    #Salva a matriz final no formato JPG
     cv2.imwrite('C:\\GitHub\\jpg-baseline-bkp\\dataset_files_download\\dataset\\sucesso.jpg', newImage)
     
     print("Comprimido, viva!!!")
     
 
 
-# In[227]:
+# In[48]:
 
 
 compression("C:\\GitHub\\jpg-baseline-bkp\\dataset_files_download\\dataset\\r15d1c836t.NEF")
+#compression("C:\\GitHub\\jpg-baseline-bkp\\dataset_files_download\\dataset\\teste-02.bmp")
+
 #compress("./jpg-baseline/dataset_files_download/dataset/teste-01.bmp")
 
