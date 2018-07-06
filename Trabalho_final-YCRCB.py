@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[60]:
+# In[15]:
 
 
 #Trabalho final
@@ -11,9 +11,10 @@ import numpy as np
 import heapq
 import os
 from matplotlib import pyplot as plt
+from PIL import Image
 
 
-# In[107]:
+# In[16]:
 
 
 class HeapNode:
@@ -34,7 +35,7 @@ class HeapNode:
         return self.freq > other.freq
 
 
-# In[127]:
+# In[48]:
 
 
 class HuffmanCoding:
@@ -130,10 +131,13 @@ class HuffmanCoding:
 
         b = self.get_byte_array(padded_encoded)
         
+        #print("huffman")
+        #print(b)
+        
         return b
 
 
-# In[128]:
+# In[18]:
 
 
 def print_image_tela(image, title = ""):
@@ -142,7 +146,7 @@ def print_image_tela(image, title = ""):
     cv2.destroyAllWindows()
 
 
-# In[129]:
+# In[19]:
 
 
 def print_image(img, title = "", size = 8):
@@ -155,7 +159,7 @@ def print_image(img, title = "", size = 8):
     plt.show()
 
 
-# In[135]:
+# In[20]:
 
 
 def zigzag(array):
@@ -167,13 +171,11 @@ def zigzag(array):
     return sum(d,[])
 
 
-# In[142]:
+# In[226]:
 
 
 def compression(imageName):
     image = cv2.imread(imageName, cv2.COLOR_BGR2YCrCb)
-    newImage = imageName[:len(imageName)-4] + ".jpg"
-    fileImage = open(newImage, 'wb')
     
     matrix_luminance =  [[16, 11, 10, 16, 24, 40, 51, 61],
                          [12, 12, 14, 19, 26, 58, 60, 55],
@@ -184,9 +186,19 @@ def compression(imageName):
                          [79, 64, 78, 87, 103, 121, 120, 101],
                          [72, 92, 95, 98, 112, 100, 103, 99]]
     
-    y, _, _ = cv2.split(image)
+    y, cb, cr = cv2.split(image)
+    
+    #print("1")
+    #print(len(y))
+    #print_image(y)
+    
+    #print("2")
+    #d = cv2.merge((y, cb, cr))
+    #print_image(d)
     
     h,w = y.shape[:2]
+    
+    print(y.shape[:2])
     
     padding_h = 0
     padding_w = 0
@@ -196,22 +208,38 @@ def compression(imageName):
         
     if (w % 8 > 0):
         padding_w = 8 - (w % 8)
+        
+    print(padding_h)
+    print(padding_w)
     
     y = cv2.copyMakeBorder(y, padding_h, 0, padding_w, 0, cv2.BORDER_REPLICATE)
     
-    h,w = y.shape[:2]
+    hy,wy = y.shape[:2]
+    
+    print(y.shape[:2])
     
     i = 0
     j = 0
+    c=0
+    
+    output_array = []
+    output_matrix = y
 
-    for i in range(0, h, 8):
-        for j in range(0, w, 8):
+    #for i in range(0, h, 8):
+        #for j in range(0, w, 8):
+    while i < hy - 8:
+        j = 0
+        while j < wy - 8:   
+            print("i: " + str(i) + " - " + str(i+8))            
+            print("j: " + str(j) + " - " + str(j+8))
             
-            image8 = np.float32(y[i:i+8,j:j+8])-128
-            dct = np.float32(image8)
+            output_array = []
+            
+            image_block_8 = np.float32(y[i:i+8,j:j+8])-128
+            dct = np.float32(image_block_8)
 
             #parâmetros do dct: input, output, flag (faz linha por linha)
-            dct = cv2.dct(image8, dct, cv2.DCT_ROWS)
+            dct = cv2.dct(image_block_8, dct, cv2.DCT_ROWS)
     
             quantization = np.int32(dct)/matrix_luminance
     
@@ -223,14 +251,57 @@ def compression(imageName):
 
             result = huffman.compress(ordination)
             
+            c+=c
             
+            r = 0
+            for r in range(len(result)):
+                output_array.append(len(result[r]) + 128)
+            
+            block_size_difference = 64 - len(result)
+            
+            #print("r: " + str(len(result)))
+            #print("dif: " + str(block_size_difference))
+            
+            r = 0
+            if (block_size_difference > 0):
+                for r in range(block_size_difference):
+                    output_array.append(128)
+            
+            output_matrix[i:i+8,j:j+8] = np.reshape(np.asmatrix(output_array), (8,8))
+            
+            j += 8
+            
+        i += 8
+    
+    #tem que cortar a matriz quando a imagem não é divisível por 8
+    print(len(output_matrix))
+    print(h)
+    print(w)
+    if(len(output_matrix) > len(y)):
+        output_matrix = output_matrix[0:h, 0:w]
+        
+    print(len(output_matrix))
+    
+    t = cv2.merge((output_matrix, cb, cr))
+    
+    #newImage = cv2.cvtColor(t, cv2.COLOR_YCrCb2RGB)    
+    newImage = t
+    
+    print("3")
+    print_image(output_matrix)    
+    
+    print("4")
+    print_image(newImage)
+    
+    cv2.imwrite('C:\\GitHub\\jpg-baseline-bkp\\dataset_files_download\\dataset\\sucesso.jpg', newImage)
+    
     print("Comprimido, viva!!!")
     
 
 
-# In[143]:
+# In[227]:
 
 
-#compression("C:\\GitHub\\jpg-baseline-bkp\\dataset_files_download\\dataset\\teste-02.bmp")
-compress("./jpg-baseline/dataset_files_download/dataset/teste-01.bmp")
+compression("C:\\GitHub\\jpg-baseline-bkp\\dataset_files_download\\dataset\\r15d1c836t.NEF")
+#compress("./jpg-baseline/dataset_files_download/dataset/teste-01.bmp")
 
